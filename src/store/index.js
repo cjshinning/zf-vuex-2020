@@ -34,12 +34,19 @@ export default new Vuex.Store({ //内部会创建一个vue实例，通信用的
       },
       mutations: {
         changeAge(state, payload) {
-          console.log('c 更新');
+          console.log('a 更新');
+        }
+      },
+      modules: {
+        e: {
+          state: {
+            c: 100
+          }
         }
       }
     },
     b: {
-      namespaced: true,
+      // namespaced: true,
       state: {
         d: 100
       },

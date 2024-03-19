@@ -4,15 +4,35 @@ let Vue;
 
 function installModule(store, rootState, path, module) {
   console.log(path);
-  module.forEachMutation((mutation, type) => {
-    console.log(mutation, type);
+  if (path.length > 0) {  //如果是子模块，需要将子模块的状态定义到根模块上
+    // 这个api可以新增属性，如果本身对象不是响应式会直接赋值
+    let parent = path.slice(0, -1).reduce((memo, current) => {
+      return memo[current];
+    }, rootState);
+
+    Vue.set(parent, path[path.length - 1], module.state);
+  }
+
+  module.forEachMutation((mutation, type) => {  // {changeAge:[fn,fn,fn]}
+    // console.log(mutation, type);
+    store._mutations[type] = (store._mutations[type] || []);
+    store._mutations[type].push((payload) => {
+      mutation.call(store, module.state, payload);
+    })
   })
   module.forEachAction((action, type) => {
-    console.log(action, type);
+    // console.log(action, type);
+    store._actions[type] = (store._actions[type] || []);
+    store._actions[type].push((payload) => {
+      action.call(store, store, payload);
+    })
   })
   module.forEachMGetter((getter, key) => {
     console.log(getter, key);
-
+    // 如果getters重名会覆盖，所有模块的getters都会定义到根模块
+    store._wrapperGetter[key] = function () {
+      return getter(module.state);
+    }
   })
   module.forEachChild((child, key) => {
     installModule(store, rootState, path.concat(key), child);
@@ -26,7 +46,7 @@ class Store {
     // 格式化成树形结构更直观，后续也更好操作一些
     // 1.收集模块转换成一棵树
     this._modules = new ModuleCollection(options);
-    console.log(this._modules);
+    // console.log(this._modules);
     // 2.安装模块，将模块上的属性 定义在我们的store中
     let state = this._modules.root.state; //根的状态
 
@@ -35,6 +55,11 @@ class Store {
     this._wrapperGetter = {}; //存放所有模块中的getters
 
     installModule(this, state, [], this._modules.root);
+
+    console.log(this._mutations);
+    console.log(this._actions);
+    console.log(this._wrapperGetter);
+    console.log(state);
 
 
     // let state = options.state;  //用户传递过来的状态
