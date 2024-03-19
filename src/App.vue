@@ -1,28 +1,10 @@
 <template>
   <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+    <!-- this.$store的this在模板中可以省略 -->
+    年龄是：{{ this.$store.state.age }}<br />
+    计算年龄是：{{ $store.getters.getAge }}<br />
+
+    <button @click="$store.commit('changeAge', 5)">同步更新状态</button>
+    <button @click="$store.dispatch('changeAge', 10)">异步更新状态</button>
   </div>
 </template>
-
-<script>
-import HelloWorld from './components/HelloWorld.vue'
-
-export default {
-  name: 'App',
-  components: {
-    HelloWorld
-  }
-}
-</script>
-
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
-</style>
