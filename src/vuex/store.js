@@ -20,7 +20,9 @@ class Store {
         return fn(this.state)
       }
       Object.defineProperty(this.getters, key, {
-        get: () => this._vm[key]
+        get: () => {
+          return this._vm[key]
+        }
       })
     })
     // defineProperty去定义这个属性
@@ -31,8 +33,25 @@ class Store {
       },
       computed  //计算属性会将自己的属性放到实例上
     })
+
+    // 发布订阅模式 将用户定义的mutation和action先保存起来，稍等当调用commit时就找订阅的mutation方法，调用dispatch就找对应的action
+    this._mutations = [];
+    forEach(options.mutations, (fn, type) => {
+      this._mutations[type] = (payload) => fn.call(this, this.state, payload);
+    })
+
+    this._actions = {};
+    forEach(options.actions, (fn, type) => {
+      this._actions[type] = (payload) => fn.call(this, this, payload);
+    })
   }
   // 类的数下访问器，当用户去这个实例上取state属性时，会执行此方法
+  commit = (type, payload) => {
+    this._mutations[type](payload);
+  }
+  dispatch = (type, payload) => {
+    this._actions[type](payload);
+  }
   get state() {
     return this._vm._data.$$store;
   }
