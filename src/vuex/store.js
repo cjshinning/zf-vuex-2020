@@ -1,15 +1,40 @@
 import applyMixin from './mixin';
-import { forEach } from './util';
 import ModuleCollection from './modules/module-collection';
 let Vue;
+
+function installModule(store, rootState, path, module) {
+  console.log(path);
+  module.forEachMutation((mutation, type) => {
+    console.log(mutation, type);
+  })
+  module.forEachAction((action, type) => {
+    console.log(action, type);
+  })
+  module.forEachMGetter((getter, key) => {
+    console.log(getter, key);
+
+  })
+  module.forEachChild((child, key) => {
+    installModule(store, rootState, path.concat(key), child);
+  })
+}
 
 // 最终用户拿到的是实例
 class Store {
   constructor(options) {
     // 格式化用户传入的参数 -> vue-router routes createRoutMap
     // 格式化成树形结构更直观，后续也更好操作一些
+    // 1.收集模块转换成一棵树
     this._modules = new ModuleCollection(options);
     console.log(this._modules);
+    // 2.安装模块，将模块上的属性 定义在我们的store中
+    let state = this._modules.root.state; //根的状态
+
+    this._mutations = {}; //存放所有模块中的mutations
+    this._actions = {}; //存放所有模块中的actions
+    this._wrapperGetter = {}; //存放所有模块中的getters
+
+    installModule(this, state, [], this._modules.root);
 
 
     // let state = options.state;  //用户传递过来的状态
