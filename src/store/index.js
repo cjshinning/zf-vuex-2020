@@ -1,5 +1,5 @@
 import Vue from 'vue'
-import Vuex from '../vuex'
+import Vuex from 'vuex'
 
 Vue.use(Vuex)
 // 跨组件通信
@@ -28,5 +28,44 @@ export default new Vuex.Store({ //内部会创建一个vue实例，通信用的
     }
   },
   modules: {
+    a: {
+      state: {
+        c: 100
+      },
+      mutations: {
+        changeAge(state, payload) {
+          console.log('c 更新');
+        }
+      }
+    },
+    b: {
+      namespaced: true,
+      state: {
+        d: 100
+      },
+      mutations: {
+        changeAge(state, payload) {
+          console.log('d 更新');
+        }
+      },
+      modules: {
+        c: {
+          state: {
+            e: 500
+          },
+          mutations: {
+            changeAge(state, payload) {
+              console.log('b/c 更新');
+            }
+          }
+        }
+      }
+    }
   }
 })
+
+// 1.默认模块没有作用域问题
+// 2.状态不要和模块的名字相同
+// 3.计算属性 直接通过getter取值
+// 4.如果增加namespaced:true 会将这个模块的数下 都封装到这个作用域下
+// 5.默认会找当前模块上是否有namespace，并且将父级的namespace一起算上，做成命名空间
