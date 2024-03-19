@@ -1,4 +1,5 @@
 import applyMixin from './mixin';
+import { forEach } from './util';
 let Vue;
 
 // 最终用户拿到的是实例
@@ -11,12 +12,25 @@ class Store {
     // observer 创建vue实例
     // vue中定义属性属性名是有特点的，如果属性名是通过$xxx命名的，不会被代理到vue的实例上
 
+    // getters 其实写的是方法，但是取值的时候是属性
+    this.getters = {};
+    const computed = {};
+    forEach(options.getters, (fn, key) => {
+      computed[key] = () => { //通过计算属性实现懒加载
+        return fn(this.state)
+      }
+      Object.defineProperty(this.getters, key, {
+        get: () => this._vm[key]
+      })
+    })
+    // defineProperty去定义这个属性
+
     this._vm = new Vue({
       data: {
         $$store: state
-      }
+      },
+      computed  //计算属性会将自己的属性放到实例上
     })
-    console.log(this._vm.$$store);
   }
   // 类的数下访问器，当用户去这个实例上取state属性时，会执行此方法
   get state() {

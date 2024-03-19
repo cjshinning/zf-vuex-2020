@@ -5,11 +5,13 @@ Vue.use(Vuex)
 // 跨组件通信
 export default new Vuex.Store({ //内部会创建一个vue实例，通信用的
   state: {  //组件状态
-    age: 10
+    age: 10,
+    a: 1
   },
   getters: {  //获取数据 计算属性 依赖的值变化后会重新执行
     getAge(state) { //如果返回的结果相同，就不会重新执行这个函数
       // 如果age属性不发生变化，就不会重新执行
+      console.log('getAge执行')
       return state.age + 18;
     }
   },
