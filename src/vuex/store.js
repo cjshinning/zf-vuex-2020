@@ -1,15 +1,16 @@
+import { forEach } from './util';
 import applyMixin from './mixin';
 import ModuleCollection from './modules/module-collection';
 let Vue;
 
 function installModule(store, rootState, path, module) {
-  console.log(path);
   if (path.length > 0) {  //如果是子模块，需要将子模块的状态定义到根模块上
     // 这个api可以新增属性，如果本身对象不是响应式会直接赋值
     let parent = path.slice(0, -1).reduce((memo, current) => {
       return memo[current];
     }, rootState);
 
+    // Vue.set会区分是否是响应式数据
     Vue.set(parent, path[path.length - 1], module.state);
   }
 
@@ -28,7 +29,6 @@ function installModule(store, rootState, path, module) {
     })
   })
   module.forEachMGetter((getter, key) => {
-    console.log(getter, key);
     // 如果getters重名会覆盖，所有模块的getters都会定义到根模块
     store._wrapperGetter[key] = function () {
       return getter(module.state);
@@ -36,6 +36,40 @@ function installModule(store, rootState, path, module) {
   })
   module.forEachChild((child, key) => {
     installModule(store, rootState, path.concat(key), child);
+  })
+}
+
+function resetStoreVm(store, state) {
+  const wrapperGetter = store._wrapperGetter;
+  let computed = {};
+  store.getters = {};
+  forEach(wrapperGetter, (fn, key) => {
+    computed[key] = function () {
+      return fn();
+    }
+    Object.defineProperty(store.getters, key, {
+      get: () => store._vm[key]
+    })
+  })
+  // forEach(wrapperGetter, (fn, key) => {
+  //   computed[key] = () => { //通过计算属性实现懒加载
+  //     return fn(this.state)
+  //   }
+  //   Object.defineProperty(store.getters, key, {
+  //     get: () => store._vm[key]
+  //   })
+  // })
+  // store._vm = new Vue({
+  //   data: {
+  //     $$state: state
+  //   },
+  //   computed
+  // });
+  store._vm = new Vue({
+    data: {
+      $$store: state
+    },
+    computed  //计算属性会将自己的属性放到实例上
   })
 }
 
@@ -56,11 +90,13 @@ class Store {
 
     installModule(this, state, [], this._modules.root);
 
-    console.log(this._mutations);
-    console.log(this._actions);
-    console.log(this._wrapperGetter);
-    console.log(state);
+    // console.log(this._mutations);
+    // console.log(this._actions);
+    // console.log(this._wrapperGetter);
+    // console.log(state);
 
+    // 将状态放到vue的实力上
+    resetStoreVm(this, state);
 
     // let state = options.state;  //用户传递过来的状态
     // // 如果直接将state定义在市里上，稍后这个状态发生变化，视图是不会更新的
@@ -102,10 +138,10 @@ class Store {
   }
   // 类的数下访问器，当用户去这个实例上取state属性时，会执行此方法
   commit = (type, payload) => {
-    this._mutations[type](payload);
+    this._mutations[type].forEach(fn => fn(payload));
   }
   dispatch = (type, payload) => {
-    this._actions[type](payload);
+    this._actions[type].forEach(fn => fn(payload));
   }
   get state() {
     return this._vm._data.$$store;
@@ -114,7 +150,7 @@ class Store {
 
 const install = (_Vue) => {
   Vue = _Vue;
-  console.log('install'); //vue-router 调用install目的？注册了全局组件 注册了原型方法 mixin=>router实例 绑定给了所有的实例
+  // console.log('install'); //vue-router 调用install目的？注册了全局组件 注册了原型方法 mixin=>router实例 绑定给了所有的实例
   applyMixin(Vue);
 }
 
