@@ -29,6 +29,7 @@ export default new Vuex.Store({ //内部会创建一个vue实例，通信用的
   },
   modules: {
     a: {
+      namespaced: true,
       state: {
         c: 100
       },
@@ -39,6 +40,7 @@ export default new Vuex.Store({ //内部会创建一个vue实例，通信用的
       },
       modules: {
         e: {
+          namespaced: true,
           state: {
             c: 100
           }
@@ -46,7 +48,7 @@ export default new Vuex.Store({ //内部会创建一个vue实例，通信用的
       }
     },
     b: {
-      // namespaced: true,
+      namespaced: true,
       state: {
         d: 100
       },
@@ -57,6 +59,7 @@ export default new Vuex.Store({ //内部会创建一个vue实例，通信用的
       },
       modules: {
         c: {
+          namespaced: true,
           state: {
             e: 500
           },

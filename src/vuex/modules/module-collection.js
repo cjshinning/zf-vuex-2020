@@ -22,6 +22,13 @@ export default class ModuleCollection {
       })
     }
   }
+  getNameSpace(path) { //获取命名空间
+    let root = this.root;
+    return path.reduce((namespace, key) => {
+      root = root.getChild(key);
+      return namespace + (root.namespaced ? key + '/' : '');
+    }, '')
+  }
 }
 
 // 格式化树结构

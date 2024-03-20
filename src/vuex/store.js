@@ -4,6 +4,10 @@ import ModuleCollection from './modules/module-collection';
 let Vue;
 
 function installModule(store, rootState, path, module) {
+  // 注册事件时，需要注册到对应的命名空间，path就是所有的路径，根据path算出一个空间里
+  let namespace = store._modules.getNameSpace(path);
+  // console.log(namespace);
+
   if (path.length > 0) {  //如果是子模块，需要将子模块的状态定义到根模块上
     // 这个api可以新增属性，如果本身对象不是响应式会直接赋值
     let parent = path.slice(0, -1).reduce((memo, current) => {
@@ -16,21 +20,21 @@ function installModule(store, rootState, path, module) {
 
   module.forEachMutation((mutation, type) => {  // {changeAge:[fn,fn,fn]}
     // console.log(mutation, type);
-    store._mutations[type] = (store._mutations[type] || []);
-    store._mutations[type].push((payload) => {
+    store._mutations[namespace + type] = (store._mutations[namespace + type] || []);
+    store._mutations[namespace + type].push((payload) => {
       mutation.call(store, module.state, payload);
     })
   })
   module.forEachAction((action, type) => {
     // console.log(action, type);
-    store._actions[type] = (store._actions[type] || []);
-    store._actions[type].push((payload) => {
+    store._actions[namespace + type] = (store._actions[namespace + type] || []);
+    store._actions[namespace + type].push((payload) => {
       action.call(store, store, payload);
     })
   })
   module.forEachMGetter((getter, key) => {
     // 如果getters重名会覆盖，所有模块的getters都会定义到根模块
-    store._wrapperGetter[key] = function () {
+    store._wrapperGetter[namespace + key] = function () {
       return getter(module.state);
     }
   })
@@ -90,9 +94,9 @@ class Store {
 
     installModule(this, state, [], this._modules.root);
 
-    // console.log(this._mutations);
-    // console.log(this._actions);
-    // console.log(this._wrapperGetter);
+    console.log(this._mutations);
+    console.log(this._actions);
+    console.log(this._wrapperGetter);
     // console.log(state);
 
     // 将状态放到vue的实力上
