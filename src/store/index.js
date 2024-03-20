@@ -3,7 +3,7 @@ import Vuex from '../vuex'
 
 Vue.use(Vuex)
 // 跨组件通信
-export default new Vuex.Store({ //内部会创建一个vue实例，通信用的
+let store = new Vuex.Store({ //内部会创建一个vue实例，通信用的
   state: {  //组件状态
     age: 10,
     a: 1
@@ -68,11 +68,27 @@ export default new Vuex.Store({ //内部会创建一个vue实例，通信用的
               console.log('b/c 更新');
             }
           }
-        }
+        },
+      }
+    },
+    e: {
+      namespaced: true,
+      state: {
+
       }
     }
   }
 })
+
+store.registerModule(['e', 'f'], {
+  state: {
+    myAge: 100
+  }
+});
+
+console.log(store);
+
+export default store;
 
 // 1.默认模块没有作用域问题
 // 2.状态不要和模块的名字相同

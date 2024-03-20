@@ -45,6 +45,7 @@ function installModule(store, rootState, path, module) {
 
 function resetStoreVm(store, state) {
   const wrapperGetter = store._wrapperGetter;
+  let oldVm = store._vm;
   let computed = {};
   store.getters = {};
   forEach(wrapperGetter, (fn, key) => {
@@ -55,26 +56,15 @@ function resetStoreVm(store, state) {
       get: () => store._vm[key]
     })
   })
-  // forEach(wrapperGetter, (fn, key) => {
-  //   computed[key] = () => { //通过计算属性实现懒加载
-  //     return fn(this.state)
-  //   }
-  //   Object.defineProperty(store.getters, key, {
-  //     get: () => store._vm[key]
-  //   })
-  // })
-  // store._vm = new Vue({
-  //   data: {
-  //     $$state: state
-  //   },
-  //   computed
-  // });
   store._vm = new Vue({
     data: {
       $$store: state
     },
     computed  //计算属性会将自己的属性放到实例上
   })
+  if (oldVm) {
+    Vue.nextTick(() => oldVm.$destroyed());
+  }
 }
 
 // 最终用户拿到的是实例
@@ -94,9 +84,9 @@ class Store {
 
     installModule(this, state, [], this._modules.root);
 
-    console.log(this._mutations);
-    console.log(this._actions);
-    console.log(this._wrapperGetter);
+    // console.log(this._mutations);
+    // console.log(this._actions);
+    // console.log(this._wrapperGetter);
     // console.log(state);
 
     // 将状态放到vue的实力上
@@ -149,6 +139,15 @@ class Store {
   }
   get state() {
     return this._vm._data.$$store;
+  }
+  registerModule(path, rawModule) {
+    if (typeof path === 'string') path = [path];
+    // 模块注册
+    this._modules.register(path, rawModule);
+
+    // 安装模块，动态将状态新增上去
+    installModule(this, this.state, path, rawModule.newModule);
+    resetStoreVm(this, this.state);
   }
 }
 

@@ -8,6 +8,7 @@ export default class ModuleCollection {
   }
   register(path, rootModule) {  //类似ast语法树
     let newModule = new Module(rootModule);
+    rootModule.newModule = newModule; //把当前注册的模块做了一个映射
     if (path.length === 0) {
       this.root = newModule;
     } else {  // [b,c]
