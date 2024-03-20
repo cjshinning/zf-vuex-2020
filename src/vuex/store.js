@@ -3,6 +3,12 @@ import applyMixin from './mixin';
 import ModuleCollection from './modules/module-collection';
 let Vue;
 
+function getState(store, path) {
+  return path.reduce((newState, current) => {
+    return newState[current];
+  }, store.state)
+}
+
 function installModule(store, rootState, path, module) {
   // 注册事件时，需要注册到对应的命名空间，path就是所有的路径，根据path算出一个空间里
   let namespace = store._modules.getNameSpace(path);
@@ -22,7 +28,11 @@ function installModule(store, rootState, path, module) {
     // console.log(mutation, type);
     store._mutations[namespace + type] = (store._mutations[namespace + type] || []);
     store._mutations[namespace + type].push((payload) => {
-      mutation.call(store, module.state, payload);
+      // 内部可能会替换状态，如果一直使用module.state可能就是老的状态
+      mutation.call(store, getState(store, path), payload);  //这里更改状态
+      // 调用订阅的事件 重新执行
+      console.log(store._subscribes);
+      store._subscribes.forEach(sub => sub({ mutation, type }, store.state));
     })
   })
   module.forEachAction((action, type) => {
@@ -35,7 +45,7 @@ function installModule(store, rootState, path, module) {
   module.forEachMGetter((getter, key) => {
     // 如果getters重名会覆盖，所有模块的getters都会定义到根模块
     store._wrapperGetter[namespace + key] = function () {
-      return getter(module.state);
+      return getter(getState(store, path));
     }
   })
   module.forEachChild((child, key) => {
@@ -58,7 +68,7 @@ function resetStoreVm(store, state) {
   })
   store._vm = new Vue({
     data: {
-      $$store: state
+      $$state: state
     },
     computed  //计算属性会将自己的属性放到实例上
   })
@@ -81,6 +91,7 @@ class Store {
     this._mutations = {}; //存放所有模块中的mutations
     this._actions = {}; //存放所有模块中的actions
     this._wrapperGetter = {}; //存放所有模块中的getters
+    this._subscribes = []
 
     installModule(this, state, [], this._modules.root);
 
@@ -91,6 +102,9 @@ class Store {
 
     // 将状态放到vue的实力上
     resetStoreVm(this, state);
+
+    // 插件实现
+    options.plugins.forEach(plugin => plugin(this));
 
     // let state = options.state;  //用户传递过来的状态
     // // 如果直接将state定义在市里上，稍后这个状态发生变化，视图是不会更新的
@@ -130,6 +144,9 @@ class Store {
     //   this._actions[type] = (payload) => fn.call(this, this, payload);
     // })
   }
+  subscribe(fn) {
+    this._subscribes.push(fn);
+  }
   // 类的数下访问器，当用户去这个实例上取state属性时，会执行此方法
   commit = (type, payload) => {
     this._mutations[type].forEach(fn => fn(payload));
@@ -137,8 +154,11 @@ class Store {
   dispatch = (type, payload) => {
     this._actions[type].forEach(fn => fn(payload));
   }
+  replaceState(newState) {  //用最新的状态替换掉
+    this._vm._data.$$state = newState;
+  }
   get state() {
-    return this._vm._data.$$store;
+    return this._vm._data.$$state;
   }
   registerModule(path, rawModule) {
     if (typeof path === 'string') path = [path];

@@ -1,5 +1,5 @@
 import Vue from 'vue'
-import Vuex from 'vuex'
+import Vuex from '../vuex'
 
 // replaceState
 // subscribe
@@ -12,6 +12,7 @@ function persists(store) {
     store.replaceState(JSON.parse(local));
   }
   store.subscribe((mutation, state) => {
+    console.log(state);
     // 只要频繁操作，就要考虑防抖和节流
     localStorage.setItem('VUEX:STATE', JSON.stringify(state));
   })
