@@ -1,14 +1,23 @@
 
 import { Store, install } from './store';
+import { mapState, mapGetters, mapMutations, mapActions } from './helpers';
 
 export default {
   Store,
-  install
+  install,
+  mapState,
+  mapGetters,
+  mapMutations,
+  mapActions
 }
 
 export {
   Store,
-  install
+  install,
+  mapState,
+  mapGetters,
+  mapMutations,
+  mapActions
 }
 
 // 两只方式都可以 可以采用默认导入，也可以采用接口结构

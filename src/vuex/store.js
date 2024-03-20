@@ -30,6 +30,7 @@ function installModule(store, rootState, path, module) {
     store._mutations[namespace + type] = (store._mutations[namespace + type] || []);
     store._mutations[namespace + type].push((payload) => {
       // 内部可能会替换状态，如果一直使用module.state可能就是老的状态
+      debugger
       store._withCommitting(() => {
         mutation.call(store, getState(store, path), payload);  //这里更改状态
       })
@@ -78,6 +79,7 @@ function resetStoreVm(store, state) {
   if (store.strict) {
     // 只要状态变化就立即执行 状态变化后同步执行
     store._vm.$watch(() => store._vm._data.$$state, () => {
+      console.log(store._committing);
       console.assert(store._committing, '在mutation之外更改了状态');
     }, { deep: true, sync: true });
   }
