@@ -12,7 +12,6 @@ function persists(store) {
     store.replaceState(JSON.parse(local));
   }
   store.subscribe((mutation, state) => {
-    console.log(state);
     // 只要频繁操作，就要考虑防抖和节流
     localStorage.setItem('VUEX:STATE', JSON.stringify(state));
   })
@@ -21,6 +20,7 @@ function persists(store) {
 Vue.use(Vuex);
 // 跨组件通信
 let store = new Vuex.Store({ //内部会创建一个vue实例，通信用的
+  strict: true, //严格模式下，只能通过mutation来更改状态，其他都不行
   plugins: [
     persists,
   ],
@@ -37,7 +37,9 @@ let store = new Vuex.Store({ //内部会创建一个vue实例，通信用的
   },
   mutations: {  //vue中的方法 唯一可以改状态的方法
     changeAge(state, payload) { //同步的
-      state.age += payload;
+      setTimeout(() => {
+        state.age += payload;
+      }, 1000)
     }
   },
   actions: {  //通过action中发起请求
@@ -99,8 +101,6 @@ store.registerModule(['e'], {
     myAge: 100
   }
 });
-
-console.log(store);
 
 export default store;
 

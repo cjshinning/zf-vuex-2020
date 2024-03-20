@@ -19,9 +19,10 @@ function installModule(store, rootState, path, module) {
     let parent = path.slice(0, -1).reduce((memo, current) => {
       return memo[current];
     }, rootState);
-
     // Vue.set会区分是否是响应式数据
-    Vue.set(parent, path[path.length - 1], module.state);
+    store._withCommitting(() => {
+      Vue.set(parent, path[path.length - 1], module.state);
+    })
   }
 
   module.forEachMutation((mutation, type) => {  // {changeAge:[fn,fn,fn]}
@@ -29,9 +30,11 @@ function installModule(store, rootState, path, module) {
     store._mutations[namespace + type] = (store._mutations[namespace + type] || []);
     store._mutations[namespace + type].push((payload) => {
       // 内部可能会替换状态，如果一直使用module.state可能就是老的状态
-      mutation.call(store, getState(store, path), payload);  //这里更改状态
+      store._withCommitting(() => {
+        mutation.call(store, getState(store, path), payload);  //这里更改状态
+      })
+
       // 调用订阅的事件 重新执行
-      console.log(store._subscribes);
       store._subscribes.forEach(sub => sub({ mutation, type }, store.state));
     })
   })
@@ -72,9 +75,15 @@ function resetStoreVm(store, state) {
     },
     computed  //计算属性会将自己的属性放到实例上
   })
-  if (oldVm) {
-    Vue.nextTick(() => oldVm.$destroyed());
+  if (store.strict) {
+    // 只要状态变化就立即执行 状态变化后同步执行
+    store._vm.$watch(() => store._vm._data.$$state, () => {
+      console.assert(store._committing, '在mutation之外更改了状态');
+    }, { deep: true, sync: true });
   }
+  // if (oldVm) {
+  //   Vue.nextTick(() => oldVm.$destroyed());
+  // }
 }
 
 // 最终用户拿到的是实例
@@ -93,12 +102,11 @@ class Store {
     this._wrapperGetter = {}; //存放所有模块中的getters
     this._subscribes = []
 
-    installModule(this, state, [], this._modules.root);
+    this.strict = options.strict;
+    // 同步的watcher
+    this._committing = false;
 
-    // console.log(this._mutations);
-    // console.log(this._actions);
-    // console.log(this._wrapperGetter);
-    // console.log(state);
+    installModule(this, state, [], this._modules.root);
 
     // 将状态放到vue的实力上
     resetStoreVm(this, state);
@@ -106,43 +114,12 @@ class Store {
     // 插件实现
     options.plugins.forEach(plugin => plugin(this));
 
-    // let state = options.state;  //用户传递过来的状态
-    // // 如果直接将state定义在市里上，稍后这个状态发生变化，视图是不会更新的
-    // // vue-router 使用defineReactive实现响应式，只定义了一个属性
-    // // observer 创建vue实例
-    // // vue中定义属性属性名是有特点的，如果属性名是通过$xxx命名的，不会被代理到vue的实例上
-    // // getters 其实写的是方法，但是取值的时候是属性
-    // this.getters = {};
-    // const computed = {};
-    // forEach(options.getters, (fn, key) => {
-    //   computed[key] = () => { //通过计算属性实现懒加载
-    //     return fn(this.state)
-    //   }
-    //   Object.defineProperty(this.getters, key, {
-    //     get: () => {
-    //       return this._vm[key]
-    //     }
-    //   })
-    // })
-    // // defineProperty去定义这个属性
-
-    // this._vm = new Vue({
-    //   data: {
-    //     $$store: state
-    //   },
-    //   computed  //计算属性会将自己的属性放到实例上
-    // })
-
-    // // 发布订阅模式 将用户定义的mutation和action先保存起来，稍等当调用commit时就找订阅的mutation方法，调用dispatch就找对应的action
-    // this._mutations = [];
-    // forEach(options.mutations, (fn, type) => {
-    //   this._mutations[type] = (payload) => fn.call(this, this.state, payload);
-    // })
-
-    // this._actions = {};
-    // forEach(options.actions, (fn, type) => {
-    //   this._actions[type] = (payload) => fn.call(this, this, payload);
-    // })
+  }
+  _withCommitting(fn) {
+    let committing = this._committing;
+    this._committing = true;  //在函数调用前 表示_committing为true
+    fn();
+    this._committing = committing;
   }
   subscribe(fn) {
     this._subscribes.push(fn);
@@ -155,7 +132,9 @@ class Store {
     this._actions[type].forEach(fn => fn(payload));
   }
   replaceState(newState) {  //用最新的状态替换掉
-    this._vm._data.$$state = newState;
+    this._withCommitting(() => {
+      this._vm._data.$$state = newState;
+    })
   }
   get state() {
     return this._vm._data.$$state;

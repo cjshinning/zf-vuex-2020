@@ -4,6 +4,7 @@
     年龄是：{{ this.$store.state.age }}<br />
     计算年龄是：{{ $store.getters.getAge }}<br />
 
+    <button @click="$store.state.age += 10">点击</button>
     <button @click="$store.commit('changeAge', 5)">同步更新状态</button>
     <button @click="$store.dispatch('changeAge', 10)">异步更新状态</button>
 
