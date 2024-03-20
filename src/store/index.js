@@ -1,9 +1,28 @@
 import Vue from 'vue'
-import Vuex from '../vuex'
+import Vuex from 'vuex'
 
-Vue.use(Vuex)
+// replaceState
+// subscribe
+// plugins
+
+// 持久化插件
+function persists(store) {
+  let local = localStorage.getItem('VUEX:STATE');
+  if (local) {
+    store.replaceState(JSON.parse(local));
+  }
+  store.subscribe((mutation, state) => {
+    // 只要频繁操作，就要考虑防抖和节流
+    localStorage.setItem('VUEX:STATE', JSON.stringify(state));
+  })
+}
+
+Vue.use(Vuex);
 // 跨组件通信
 let store = new Vuex.Store({ //内部会创建一个vue实例，通信用的
+  plugins: [
+    persists,
+  ],
   state: {  //组件状态
     age: 10,
     a: 1
@@ -70,17 +89,11 @@ let store = new Vuex.Store({ //内部会创建一个vue实例，通信用的
           }
         },
       }
-    },
-    e: {
-      namespaced: true,
-      state: {
-
-      }
     }
   }
 })
 
-store.registerModule(['e', 'f'], {
+store.registerModule(['e'], {
   state: {
     myAge: 100
   }
